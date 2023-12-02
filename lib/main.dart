@@ -29,58 +29,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class Record {
-  final String computerName;
-  final String ip;
-  final DateTime loginTime;
-  final DateTime logoutTime;
-  final String userName;
-
-  Record(
-      {required this.computerName,
-      required this.ip,
-      required this.loginTime,
-      required this.logoutTime,
-      required this.userName});
-
-  factory Record.fromJson(Map<String, dynamic> json) {
-    var loginTime = DateTime.parse(json['loginTime']! + 'Z');
-    var logoutTime = json['logoutTime'] == null || json['logoutTime'].isEmpty
-        ? DateTime.now()
-        : DateTime.parse(json['logoutTime'] + 'Z');
-
-    return Record(
-        computerName: json['computerName']!,
-        ip: json['computerName']!,
-        loginTime: loginTime.toLocal(),
-        logoutTime: logoutTime.toLocal(),
-        userName: json['userName']);
-  }
-
-  Map toJson() => {
-        'computerName': computerName,
-        'ip': ip,
-        'loginTime': DateFormat('yyyy-MM-dd HH:mm:ss').format(loginTime),
-        'logoutTime': DateFormat('yyyy-MM-dd HH:mm:ss').format(logoutTime),
-        'userName': userName
-      };
-}
-
-class StatisticsResponse {
-  final int status;
-  final List<Record> data;
-
-  StatisticsResponse(this.status, this.data);
-
-  factory StatisticsResponse.fromJson(Map<String, dynamic> json) {
-    var list = json['data'] as List;
-    List<Record> records = list.map((e) => Record.fromJson(e)).toList();
-    return StatisticsResponse(json['status']!, records);
-  }
-
-  Map toJson() => {'status': status, 'data': data};
-}
-
 class FormApp extends StatefulWidget {
   const FormApp({super.key});
 
@@ -105,7 +53,74 @@ class _FormAppState extends State<FormApp> {
   var _message = '';
   var _host = '';
   var _password = '';
-  // List<Record> _logStatistics = [];
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            TextFormField(
+              decoration: const InputDecoration(
+                hintText: 'Enter url of license server',
+              ),
+              validator: (String? value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter some text';
+                } else if (!isValidUrl(value)) {
+                  return 'Please enter valid url';
+                }
+                return null;
+              },
+              onChanged: (text) {
+                _host = text;
+              },
+            ),
+            const SizedBox(
+              height: 10,
+            ),
+            TextFormField(
+              decoration: const InputDecoration(
+                hintText: 'Enter password',
+              ),
+              validator: (String? value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter some text';
+                }
+                return null;
+              },
+              onChanged: (text) {
+                _password = text;
+              },
+            ),
+            const SizedBox(
+              height: 10,
+            ),
+            ElevatedButton(
+              onPressed: _downloading
+                  ? null
+                  : () {
+                      if (_formKey.currentState!.validate()) {
+                        _getLog();
+                      }
+                    },
+              child: const Text('Query'),
+            ),
+            const SizedBox(
+              height: 10,
+            ),
+            Text(
+              _finished ? _message : '',
+              style: TextStyle(color: _showError ? Colors.red : Colors.green),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   List<TimeSeriesPoint> prepareChartData(List<Record> records) {
     DateTime start = DateTime.now();
@@ -206,74 +221,6 @@ class _FormAppState extends State<FormApp> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(20.0),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            TextFormField(
-              decoration: const InputDecoration(
-                hintText: 'Enter url of license server',
-              ),
-              validator: (String? value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter some text';
-                } else if (!isValidUrl(value)) {
-                  return 'Please enter valid url';
-                }
-                return null;
-              },
-              onChanged: (text) {
-                _host = text;
-              },
-            ),
-            const SizedBox(
-              height: 10,
-            ),
-            TextFormField(
-              decoration: const InputDecoration(
-                hintText: 'Enter password',
-              ),
-              validator: (String? value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter some text';
-                }
-                return null;
-              },
-              onChanged: (text) {
-                _password = text;
-              },
-            ),
-            const SizedBox(
-              height: 10,
-            ),
-            ElevatedButton(
-              onPressed: _downloading
-                  ? null
-                  : () {
-                      if (_formKey.currentState!.validate()) {
-                        _getLog();
-                      }
-                    },
-              child: const Text('Query'),
-            ),
-            const SizedBox(
-              height: 10,
-            ),
-            Text(
-              _finished ? _message : '',
-              style: TextStyle(color: _showError ? Colors.red : Colors.green),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   void _writeLog(List<Record> records, String file) async {
     var logFile = File(file);
     var sink = logFile.openWrite();
@@ -342,4 +289,56 @@ bool isValidUrl(String value) {
   RegExp regExp = RegExp(pattern);
 
   return regExp.hasMatch(value);
+}
+
+class Record {
+  final String computerName;
+  final String ip;
+  final DateTime loginTime;
+  final DateTime logoutTime;
+  final String userName;
+
+  Record(
+      {required this.computerName,
+      required this.ip,
+      required this.loginTime,
+      required this.logoutTime,
+      required this.userName});
+
+  factory Record.fromJson(Map<String, dynamic> json) {
+    var loginTime = DateTime.parse(json['loginTime']! + 'Z');
+    var logoutTime = json['logoutTime'] == null || json['logoutTime'].isEmpty
+        ? DateTime.now()
+        : DateTime.parse(json['logoutTime'] + 'Z');
+
+    return Record(
+        computerName: json['computerName']!,
+        ip: json['computerName']!,
+        loginTime: loginTime.toLocal(),
+        logoutTime: logoutTime.toLocal(),
+        userName: json['userName']);
+  }
+
+  Map toJson() => {
+        'computerName': computerName,
+        'ip': ip,
+        'loginTime': DateFormat('yyyy-MM-dd HH:mm:ss').format(loginTime),
+        'logoutTime': DateFormat('yyyy-MM-dd HH:mm:ss').format(logoutTime),
+        'userName': userName
+      };
+}
+
+class StatisticsResponse {
+  final int status;
+  final List<Record> data;
+
+  StatisticsResponse(this.status, this.data);
+
+  factory StatisticsResponse.fromJson(Map<String, dynamic> json) {
+    var list = json['data'] as List;
+    List<Record> records = list.map((e) => Record.fromJson(e)).toList();
+    return StatisticsResponse(json['status']!, records);
+  }
+
+  Map toJson() => {'status': status, 'data': data};
 }
